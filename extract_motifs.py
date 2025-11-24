@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from collections import Counter
 from typing import Tuple, Optional, Dict
 
@@ -162,7 +162,7 @@ def visualize_top_k_patches(patch_counts: Counter, patch_size: Tuple[int, int], 
         ax = axes_flat[i]
         
         # Display the patch
-        ax.imshow(patch_array, cmap='gray_r')
+        ax.imshow(patch_array, cmap='jet', vmin=0, vmax=1)
         
         ax.set_title(f"#{i+1}\n(Count: {count})", fontsize=10)
         ax.set_axis_off() # Hide x and y axes
@@ -174,25 +174,78 @@ def visualize_top_k_patches(patch_counts: Counter, patch_size: Tuple[int, int], 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     
     # Save figure
-    plt.savefig(f"rodent_({patch_size[0]}x{patch_size[1]})_motifs.jpeg", bbox_inches='tight')
+    plt.savefig(f"primate_({patch_size[0]}x{patch_size[1]})_motifs.jpeg", bbox_inches='tight')
+
+def save_patches_to_dataset(
+    patch_counts: Counter,
+    patch_size: Tuple[int, int],
+    dtype: np.dtype,
+    repo_id: str
+):
+    """
+    Saves the unique patches and their frequencies to a Hugging Face Hub dataset.
+
+    Args:
+        patch_counts: Counter object from processing.
+        patch_size: The (p0, p1) dimensions of each patch.
+        dtype: The NumPy dtype of the original patch data.
+        repo_id: The Hugging Face Hub repo-id (e.g., "username/dataset-name").
+    """
+    print(f"\n--- Saving Unique Patches to Hugging Face Hub ---")
+
+    total_patches = sum(patch_counts.values())
+
+    print(f"Total unique patches: {len(patch_counts)}")
+    print(f"Total patches (all occurrences): {total_patches}")
+
+    # Prepare data for the dataset
+    data_list = []
+    for patch_bytes, count in patch_counts.items():
+        patch_array = reconstruct_patch(patch_bytes, patch_size, dtype)
+        probability = count / total_patches
+        
+        data_list.append({
+            "patch": patch_array.flatten().tolist(), # Convert NumPy array to FLAT list
+            "frequency": count,
+            "probability": probability
+        })
+
+    # Sort by frequency (most common first)
+    data_list.sort(key=lambda x: x['frequency'], reverse=True)
+
+    print("Creating dataset object...")
+    # Create the dataset
+    unique_patch_dataset = Dataset.from_list(data_list)
+    
+    # Push to Hub
+    print(f"Pushing dataset to Hugging Face Hub at '{repo_id}'...")
+    unique_patch_dataset.push_to_hub(repo_id, token=True)
+    
+    print("...Push complete.")
+    print(f"You can now access the dataset at:")
+    print(f"https://huggingface.co/datasets/{repo_id}")
+
 
 if __name__ == "__main__":
     
-    # 1. Specify your dataset and split
+    # Specify the dataset and split
     DATASET_NAME = "eminorhan/neural-pile-rodent"
     DATASET_SPLIT = "train"
     
-    # 2. Specify the column that contains the (n, t) numerical arrays.
+    # Specify the column that contains the (n, t) numerical arrays.
     DATA_COLUMN = "spike_counts"
     
-    # 3. Specify patch size
-    PATCH_SIZE = (4, 16) # (p0, p1)
+    # Specify patch size
+    PATCH_SIZE = (1, 15)  # (p0, p1)
     
-    # 4. Specify the data type of your arrays (for reconstructing/printing) (e.g., np.uint8, np.float32, etc.)
+    # Specify the data type of your arrays (for reconstructing/printing) (e.g., np.uint8, np.float32, etc.)
     DATA_DTYPE = np.uint8 
     
-    # 5. Specify K for top-K visualization
-    K_TOP_PATCHES = 16 # e.g., 16 for a 4x4 grid
+    # Specify K for top-K visualization
+    K_TOP_PATCHES = 16  # e.g., 16 for a 4x4 grid
+
+    # Specify repo id for remote saving
+    HF_REPO_ID = "eminorhan/neural-pile-rodent-1x15"
 
     counts = process_and_count_patches(
         dataset_name=DATASET_NAME,
@@ -202,7 +255,6 @@ if __name__ == "__main__":
     )
     
     print("\n--- Top 10 Most Common Patches ---")
-    
     for i, (patch_bytes, count) in enumerate(counts.most_common(10)):
         print(f"\n#{i+1}: Count = {count}")
         
@@ -219,4 +271,12 @@ if __name__ == "__main__":
         patch_size=PATCH_SIZE,
         dtype=DATA_DTYPE,
         k=K_TOP_PATCHES
+    )
+
+    # Save dataset to hub
+    save_patches_to_dataset(
+        patch_counts=counts,
+        patch_size=PATCH_SIZE,
+        dtype=DATA_DTYPE,
+        repo_id=HF_REPO_ID
     )

@@ -57,7 +57,7 @@ python visualize_datasets.py --repo_name 'eminorhan/v2h' --n_examples 9
 ```
 This will randomly sample `n_examples` examples from the corresponding dataset and visualize them as below, where *x* is the time axis (binned into 20 ms windows) and the *y* axis represents the recorded units:
 
-![](visuals/v2h.jpg)
+![](rasters/v2h.jpg)
 
 Users also have the option to visualize `n_examples` random examples from each component dataset by calling:
 ```python
