@@ -1,6 +1,6 @@
 import numpy as np
 from datasets import load_dataset
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, get_context
 from tqdm import tqdm
 import os
 
@@ -82,20 +82,20 @@ def estimate_spike_probabilities(dataset_name, split="train", column="spike_coun
     Parallelized estimation of spike count probabilities.
     """
     if num_workers is None:
-        num_workers = cpu_count()
+        num_workers = cpu_count() // 2
         
     print(f"Starting parallel processing with {num_workers} workers...")
     print(f"Dataset: {dataset_name} | Batch Size per worker: {batch_size}")
 
     # Prepare arguments for each worker
     # Format: (rank, total_shards, dataset_name, split, column, batch_size)
-    worker_args = [
-        (i, num_workers, dataset_name, split, column, batch_size) 
-        for i in range(num_workers)
-    ]
+    worker_args = [(i, num_workers, dataset_name, split, column, batch_size) for i in range(num_workers)]
+
+    # Use 'spawn' context instead of default (which might be 'fork')
+    ctx = get_context('spawn')
 
     # Spawn processes
-    with Pool(num_workers) as pool:
+    with ctx.Pool(num_workers) as pool:
         # Map the worker function to the arguments
         results = pool.map(process_dataset_shard, worker_args)
     
