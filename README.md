@@ -71,3 +71,9 @@ For a more fine-grained analysis of the data, I also wrote a simple script in [`
 ![](motifs/rodent_(1x10)_motifs.jpeg)
 
 For (1, 10) motifs, ~28M unique motifs are instantiated over the whole dataset (out of a maximum possible of ~45B unique motifs of this size). The "silent" motif (all zeros) dominates the dataset with something like ~30B occurrences overall, distantly followed by various single spike motifs, followed by various two spike motifs, *etc.*, as shown above. More examples can be found in the [motifs](motifs) folder.
+
+## Tokenizing the motifs
+[`tokenize_motifs.py`](tokenize_motifs.py) can be used to tokenize the motifs into discrete tokens for compression and denoising purposes. This script uses an embarassingly simple tokenization method to tokenize the motifs: for a tokenizer vocabulary of size *K*, it simply assigns unique indices to the top *K* unique motifs in the dataset by frequency count and for the remaining motifs, it assigns one of these *K* tokens based on cosine similarity between the motif in question and the reference motifs for all *K* tokens. This scheme allows us to encode the overwhelming majority of the data losslessy; for the remainder of the data, we incur a small compression cost.
+
+## Reordering the neurons
+To impose a standardized ordering on the recorded neurons in each dataset row, users can also utilize the [`reorder_neurons_sharded.py`](reorder_neurons_sharded.py) script. This will perform hierarchical clustering on the temporal activity profiles of the recorded neurons and then optimally reorder the neurons based on the similarity of their temporal activity profiles. This sort of reordering is expected to make the neural prediction task easier. A reordered version of the main `neural-pile-rodent` dataset can be found in [this](https://huggingface.co/datasets/eminorhan/neural-pile-rodent-reordered) Hugging Face dataset repository.
