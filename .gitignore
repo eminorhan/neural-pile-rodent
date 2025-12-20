@@ -13,6 +13,7 @@
 *.csv
 *.zip
 *.hdf5
+*.parquet
 
 # Directories
 **/__pycache__

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy.spatial.distance import pdist
 from scipy.cluster.hierarchy import linkage, leaves_list
@@ -46,10 +47,13 @@ def apply_reordering(example):
     return example
 
 def main():
+
+    os.environ["OMP_NUM_THREADS"] = "1"
+
     # Configuration
     SOURCE_REPO = "eminorhan/neural-pile-rodent"
     TARGET_REPO = "eminorhan/neural-pile-rodent-reordered"
-    NUM_PROC = 64  # Adjust based on available CPU cores
+    NUM_PROC = 72  # Adjust based on available CPU cores
     
     print(f"Loading dataset from {SOURCE_REPO}...")
     dataset = load_dataset(SOURCE_REPO)
